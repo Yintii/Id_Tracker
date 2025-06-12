@@ -90,7 +90,11 @@ class _ScannerPageState extends State<ScannerPage> {
       if (line.startsWith('DAC')) data['first_name'] = line.substring(3).trim();
       if (line.startsWith('DAD')) data['middle_name'] = line.substring(3).trim();
       if (line.startsWith('DBB')) data['dob'] = line.substring(3).trim(); // DDMMYYYY
-
+      if (line.startsWith('DAJ')) data['state'] = line.substring(3).trim();
+      if (line.startsWith('DBA')) data['expiration'] = line.substring(3).trim();
+      if (line.startsWith('DBC')) data['gender'] = line.substring(3).trim();
+      if (line.startsWith('DAK')) data['zipcode'] = line.substring(3).trim();
+      
       if (line.startsWith('DCK')){
         var licenseString = line.substring(8).trim();
         var finalString = licenseString.substring(0, licenseString.length - 4);
