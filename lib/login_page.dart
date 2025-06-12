@@ -12,7 +12,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _storage = FlutterSecureStorage();
-  final login_url = 'b6d4-2603-8001-58f0-7770-7462-3dc3-ab69-e46f.ngrok-free.app';
+  final url = 'b6d4-2603-8001-58f0-7770-7462-3dc3-ab69-e46f.ngrok-free.app';
   
   bool _isLoading = false;
   String? _errorMessage;
@@ -26,11 +26,11 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    final url = Uri.parse('https://$login_url/login');
+    final _url = Uri.parse('https://$url/login');
 
     try {
       final response = await http.post(
-        url,
+        _url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );

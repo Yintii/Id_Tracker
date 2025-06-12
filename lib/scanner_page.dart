@@ -1,12 +1,8 @@
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-import 'package:flutter/foundation.dart';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
-import 'package:camera/camera.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 
 class ScannerPage extends StatefulWidget {
   @override
@@ -14,206 +10,164 @@ class ScannerPage extends StatefulWidget {
 }
 
 class _ScannerPageState extends State<ScannerPage> {
-  late CameraController _cameraController;
-  late BarcodeScanner _barcodeScanner;
-  late InputImageFormat _inputImageFormat;
-  late ImageFormatGroup _cameraImageFormatGroup;
+  final url = 'b6d4-2603-8001-58f0-7770-7462-3dc3-ab69-e46f.ngrok-free.app';
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    facing: CameraFacing.back,
+    formats: [BarcodeFormat.pdf417],
+  );
 
-  bool _isDetecting = false;
-  bool _isCameraInitialized = false;
+  bool _isLoading = false;
+  String? _errorMessage;
 
-
-  
-
-
-  @override
-  void initState() {
-    super.initState();
-    _requestPermissionsAndInitialize();
-    
-  }
+  bool _scanned = false;
 
   @override
   void dispose() {
-    if (_isCameraInitialized) {
-      _cameraController.dispose();
-    }
-    _barcodeScanner.close();
+    _controller.dispose();
     super.dispose();
   }
+
+  void _onDetect(BarcodeCapture capture) async {
+    if (_scanned) return;
+    final List<Barcode> barcodes = capture.barcodes;
+
+    for (final barcode in barcodes) {
+      if (barcode.format == BarcodeFormat.pdf417 && barcode.rawValue != null) {
+        setState(() {
+          _scanned = true;
+        });
+
+        final patronData = parsePdf417(barcode.rawValue!);
+        final _url = Uri.parse('https://$url/check_id');
+
+        print("Patron data parsed: ${patronData}");
+
+        try {
+          final jsonBody = jsonEncode(patronData);
+          print("Sending JSON body: $jsonBody");
+
+          final response = await http.post(
+            _url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonBody,
+          );
+
+          print("Response status: ${response.statusCode}");
+          print("Response body: ${response.body}");
+
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            print("Success data: $data");
+          } else {
+            final error = jsonDecode(response.body)['error'] ?? 'ID check failed';
+            setState(() {
+              _errorMessage = error;
+              _isLoading = false;
+            });
+          }
+        } catch (e) {
+          setState(() {
+            _errorMessage = 'Network error: $e';
+            _isLoading = false;
+          });
+        }
+
+
+        //this is the place to get the id information
+        _controller.stop();
+        break;
+      }
+    }
+  }
+
+  Map<String, String> parsePdf417(String raw) {
+    final Map<String, String> data = {};
+    final lines = raw.split(RegExp(r'\n|\r'));
+    lines.forEach(print);
+    for (var line in lines) {
+      if (line.startsWith('DCS')) data['last_name'] = line.substring(3).trim();
+      if (line.startsWith('DAC')) data['first_name'] = line.substring(3).trim();
+      if (line.startsWith('DAD')) data['middle_name'] = line.substring(3).trim();
+      if (line.startsWith('DBB')) data['dob'] = line.substring(3).trim(); // DDMMYYYY
+
+      if (line.startsWith('DCK')){
+        var licenseString = line.substring(8).trim();
+        var finalString = licenseString.substring(0, licenseString.length - 4);
+        data['license_number'] = finalString;
+      }
+    }
+    return data;
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Scan License")),
-      body: _isCameraInitialized
-          ? CameraPreview(_cameraController)
-          : Center(child: Text("Waiting for permissions...")),
-    );
-  }
+      appBar: AppBar(title: Text('Scan License')),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final scanWidth = constraints.maxWidth / 1.1;
+          final scanHeight = constraints.maxHeight / 5;
+          final left = (constraints.maxWidth - scanWidth) / 2;
+          final top = (constraints.maxHeight - scanHeight) / 15;
 
-  Future<void> _requestPermissionsAndInitialize() async {
-    final cameraStatus = await Permission.camera.status;
-    final micStatus = await Permission.microphone.status;
+          final scanRect = Rect.fromLTWH(left, top, scanWidth, scanHeight);
 
-    if (cameraStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied) {
-      _showPermissionsDeniedDialog();
-      return;
-    }
-
-    final newCameraStatus = await Permission.camera.request();
-    final newMicStatus = await Permission.microphone.request();
-
-    if (!newCameraStatus.isGranted || !newMicStatus.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Camera or Microphone permission denied")),
-      );
-      return;
-    }
-
-    await _initializeCameraAndScanner();
-  }
-
-  Future<void> _initializeCameraAndScanner() async {
-
-    _inputImageFormat = Platform.isIOS ? InputImageFormat.bgra8888 : InputImageFormat.yuv420;
-    _cameraImageFormatGroup = Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.yuv420;
-
-    print(_inputImageFormat);
-    print(_cameraImageFormatGroup);
-    print(_isCameraInitialized);
-
-    if(_isCameraInitialized){
-      try{
-        await _cameraController.stopImageStream();
-      }catch (_){}
-
-      try{
-        await _cameraController.dispose();
-      }catch (_){
-        _isCameraInitialized = false;
-      }
-    }
-
-    final cameras = await availableCameras();
-
-    cameras.forEach(print);
-
-    final backCamera = cameras.firstWhere(
-      (camera) => camera.lensDirection == CameraLensDirection.back,
-      orElse: () => cameras.first,
-    );
-
-    print('BackCamera: $backCamera');
-
-    _cameraController = CameraController(
-      backCamera,
-      ResolutionPreset.medium,
-      imageFormatGroup: _cameraImageFormatGroup,
-    );
-    await _cameraController.initialize();
-
-    print("Camera controller: $_cameraController");
-
-    _barcodeScanner = BarcodeScanner(formats: [BarcodeFormat.pdf417]);
-    setState(() {
-      _isCameraInitialized = true;
-    });
-
-    print('Barcode scanner: $_barcodeScanner');
-
-    Future.delayed(Duration(milliseconds: 1000), (){
-      try{
-        _cameraController.startImageStream((CameraImage image){
-          _processCameraImage(image);
-        }); 
-      }catch (e){
-        debugPrint("Failed to start image stream: $e");
-      }
-    });
-  }
-
-  Uint8List _concatenatePlanes(List<Plane> planes){
-    final WriteBuffer allBytes = WriteBuffer();
-    for (final plane in planes){
-      allBytes.putUint8List(plane.bytes);
-    }
-    return allBytes.done().buffer.asUint8List();
-  }
-
-  Future<void> _processCameraImage(CameraImage image) async {
-    if (_isDetecting) return;
-    _isDetecting = true;
-
-    try {
-      final WriteBuffer allBytes = WriteBuffer();
-      for (Plane plane in image.planes) {
-        allBytes.putUint8List(plane.bytes);
-      }
-      final bytes = allBytes.done().buffer.asUint8List();
-
-      final inputImage = InputImage.fromBytes(
-        bytes: bytes,
-        metadata: InputImageMetadata(
-          size: Size(image.width.toDouble(), image.height.toDouble()),
-          rotation: _rotationIntToEnum(_cameraController.description.sensorOrientation),
-          format: _inputImageFormat,
-          bytesPerRow: image.planes.first.bytesPerRow,
-        ),
-      );
-
-      final barcodes = await _barcodeScanner.processImage(inputImage);
-
-      for (final barcode in barcodes) {
-        if (barcode.format == BarcodeFormat.pdf417) {
-          debugPrint("PDF417 Detected: ${barcode.rawValue}");
-        }
-      }
-    } catch (e) {
-      debugPrint("Error trying to process camera image: $e");
-    } finally {
-      _isDetecting = false;
-    }
-  }
-
-  InputImageRotation _rotationIntToEnum(int rotation) {
-    switch (rotation) {
-      case 0:
-        return InputImageRotation.rotation0deg;
-      case 90:
-        return InputImageRotation.rotation90deg;
-      case 180:
-        return InputImageRotation.rotation180deg;
-      case 270:
-        return InputImageRotation.rotation270deg;
-      default:
-        throw Exception("Invalid rotation value");
-    }
-  }
-
-
-  void _showPermissionsDeniedDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Permissions Required"),
-        content: Text(
-            "Camera and microphone access are permanently denied. Please enable them in Settings to use the scanner."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await openAppSettings();
-            },
-            child: Text("Open Settings"),
-          ),
-        ],
+          return Stack(
+            children: [
+              Positioned(
+                left: left,
+                top: top,
+                width: scanWidth,
+                height: scanHeight,
+                child: ClipRect(
+                  child: MobileScanner(
+                    controller: _controller,
+                    scanWindow: Rect.fromLTWH(0, 0, scanWidth, scanHeight),
+                    fit: BoxFit.cover,
+                    onDetect: _onDetect,
+                  ),
+                ),
+              ),
+              // Visual guide for scan area (optional)
+              Positioned(
+                left: left,
+                top: top,
+                width: scanWidth,
+                height: scanHeight,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                ),
+              ),
+              // Optional scan complete overlay
+              if (_scanned)
+                Center(
+                  child: Container(
+                    padding: EdgeInsets.all(20),
+                    color: Colors.black.withOpacity(0.6),
+                    child: Text(
+                      'Scan complete',
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.restart_alt),
+        onPressed: () {
+          setState(() {
+            _scanned = false;
+          });
+          _controller.start();
+        },
       ),
     );
-}
+  }
 
 }

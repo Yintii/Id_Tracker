@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/main',
+      initialRoute: '/login',
       routes: {
         '/login': (context) => LoginPage(), // Your full login form
         '/main': (context) => MainPage(),   // Placeholder for now
