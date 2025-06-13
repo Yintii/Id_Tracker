@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 
 class ScannerPage extends StatefulWidget {
@@ -99,8 +100,12 @@ class _ScannerPageState extends State<ScannerPage> {
         var licenseString = line.substring(8).trim();
         var finalString = licenseString.substring(0, licenseString.length - 4);
         data['license_number'] = finalString;
-      }
+      }      
     }
+
+    final now = DateTime.now();
+    final formatted = DateFormat('MMddyyyy').format(now);
+    data['last_scanned'] = formatted;
     return data;
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart'; // Make sure this is your real login form
-import 'scanner_page.dart';  // You can make this a separate file later
+import 'login_page.dart'; 
+import 'scanner_page.dart'; 
+import 'todayspatrons_page.dart';
 
 void main() {
   runApp(MyApp());
@@ -19,6 +20,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginPage(), // Your full login form
         '/main': (context) => MainPage(),   // Placeholder for now
         '/scanner': (context) => ScannerPage(),
+        '/patrons': (context) => TodaysPatronsPage(),
       },
     );
   }
@@ -46,6 +48,13 @@ class MainPage extends StatelessWidget {
                 // Navigator.pushNamed(context, '/incidents'); // Add this when incident list is ready
               },
               child: Text('View Incidents'),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: (){
+                Navigator.pushNamed(context, '/patrons');
+              },
+              child: Text('Today\'s Patrons'),
             ),
           ],
         ),

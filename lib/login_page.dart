@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:id_tracker_app/services/current_user.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -39,6 +41,17 @@ class _LoginPageState extends State<LoginPage> {
         final data = jsonDecode(response.body);
         final token = data['token'];
         final role = data['role'];
+
+        final decodedToken = JwtDecoder.decode(token);
+
+        CurrentUser().setUser(
+          jwtToken: token,
+          id: decodedToken['user_id'],
+          userEmail: decodedToken['email'],
+          userRole: role,
+        );
+
+
 
         // Save token and role securely
         await _storage.write(key: 'jwt_token', value: token);
