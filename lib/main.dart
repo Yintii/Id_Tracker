@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'login_page.dart'; 
 import 'scanner_page.dart'; 
 import 'todayspatrons_page.dart';
+import 'pending_incidents_page.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
   runApp(MyApp());
 }
 
@@ -21,6 +24,7 @@ class MyApp extends StatelessWidget {
         '/main': (context) => MainPage(),   // Placeholder for now
         '/scanner': (context) => ScannerPage(),
         '/patrons': (context) => TodaysPatronsPage(),
+        '/incidents/pending': (context) => PendingIncidentsPage(),
       },
     );
   }
@@ -45,7 +49,7 @@ class MainPage extends StatelessWidget {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                // Navigator.pushNamed(context, '/incidents'); // Add this when incident list is ready
+                Navigator.pushNamed(context, '/incidents/pending'); // Add this when incident list is ready
               },
               child: Text('View Incidents'),
             ),

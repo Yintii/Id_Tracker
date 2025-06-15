@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:id_tracker_app/services/current_user.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -14,7 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _storage = FlutterSecureStorage();
-  final url = 'b6d4-2603-8001-58f0-7770-7462-3dc3-ab69-e46f.ngrok-free.app';
+  final String? url = dotenv.env['API_BASE_URL'];
   
   bool _isLoading = false;
   String? _errorMessage;
@@ -28,7 +29,7 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    final _url = Uri.parse('https://$url/login');
+    final _url = Uri.parse('$url/login');
 
     try {
       final response = await http.post(

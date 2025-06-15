@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:id_tracker_app/services/current_user.dart';
+import 'package:id_tracker_app/services/incident.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class NewIncidentPage extends StatefulWidget {
   final String patronId;
@@ -16,7 +18,7 @@ class NewIncidentPage extends StatefulWidget {
 class _NewIncidentPageState extends State<NewIncidentPage> {
   final _formKey = GlobalKey<FormState>();
   final _commentController = TextEditingController();
-  final _baseUrl = 'https://b6d4-2603-8001-58f0-7770-7462-3dc3-ab69-e46f.ngrok-free.app';
+  final String? _baseUrl = dotenv.env['API_BASE_URL'];
 
   String? _incidentType;
   bool _submitting = false;
@@ -50,11 +52,20 @@ class _NewIncidentPageState extends State<NewIncidentPage> {
       return;
     }
 
+    final incident = Incident(
+      id: 0, // will be ignored by backend
+      userId: userID,
+      patronId: int.parse(widget.patronId),
+      description: _commentController.text.trim(),
+      status: "Pending",
+      type: _incidentType!,
+      dateOccurred: DateTime.now(),
+      createdAt: DateTime.now(),
+      approvedBy: null,
+      approvedAt: null,
+    );
+
     final url = Uri.parse("$_baseUrl/patrons/${widget.patronId}/create_incident");
-
-    debugPrint("userID: $userID - is an int ${userID is int}");
-    debugPrint("patronID: ${widget.patronId} is an int ${widget.patronId is int}");
-
 
     try {
       final response = await http.post(
@@ -63,14 +74,7 @@ class _NewIncidentPageState extends State<NewIncidentPage> {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          "user_id": userID,
-          "patron_id": int.parse(widget.patronId),
-          "type": _incidentType,
-          "description": _commentController.text.trim(),
-          "status": "Pending", // you can define default status
-          "date_occurred": DateTime.now().toUtc().toIso8601String(), // ISO 8601 for Go `time.Time`
-        }),
+        body: jsonEncode(incident.toJson()),
       );
 
       if (response.statusCode == 200) {
@@ -95,6 +99,7 @@ class _NewIncidentPageState extends State<NewIncidentPage> {
       });
     }
   }
+
 
   @override
   void dispose() {
