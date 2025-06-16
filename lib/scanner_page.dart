@@ -41,7 +41,7 @@ class _ScannerPageState extends State<ScannerPage> {
         });
 
         final patronData = parsePdf417(barcode.rawValue!);
-        final _url = Uri.parse('https://$url/check_id');
+        final _url = Uri.parse('$url/check_id');
 
         print("Patron data parsed: ${patronData}");
 

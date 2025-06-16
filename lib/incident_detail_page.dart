@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:id_tracker_app/services/incident.dart';
 import 'package:id_tracker_app/services/current_user.dart';
@@ -9,19 +10,21 @@ class IncidentDetailPage extends StatelessWidget {
 
   Future<void> _approveIncident(BuildContext context) async {
     final token = CurrentUser().token;
+    final approverID = CurrentUser().userId;
     if (token == null) return;
 
-    final success = await Incident.approveIncident(incident.id, token);
-    if (success) Navigator.pop(context);
+    final success = await Incident.approveIncident(incident.id, approverID, token);
+    if (success) Navigator.pop(context, true);
     else _showError(context, 'Failed to approve incident');
   }
 
   Future<void> _denyIncident(BuildContext context) async {
     final token = CurrentUser().token;
+    final approverID = CurrentUser().userId;
     if (token == null) return;
 
-    final success = await Incident.deleteIncident(incident.id, token);
-    if (success) Navigator.pop(context);
+    final success = await Incident.deleteIncident(incident.id, approverID, token);
+    if (success) Navigator.pop(context, true);
     else _showError(context, 'Failed to delete incident');
   }
 

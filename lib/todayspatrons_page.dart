@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'new_incident_page.dart';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TodaysPatronsPage extends StatefulWidget {
   @override
@@ -10,7 +10,7 @@ class TodaysPatronsPage extends StatefulWidget {
 }
 
 class _TodaysPatronsPageState extends State<TodaysPatronsPage> {
-  final url = 'b6d4-2603-8001-58f0-7770-7462-3dc3-ab69-e46f.ngrok-free.app';
+  final String? url = dotenv.env['API_BASE_URL'];
   List<Map<String, dynamic>> _patrons = [];
   bool _loading = true;
   String? _errorMessage;
@@ -28,7 +28,7 @@ class _TodaysPatronsPageState extends State<TodaysPatronsPage> {
     });
 
     try {
-      final uri = Uri.parse('https://$url/todays_patrons');
+      final uri = Uri.parse('$url/todays_patrons');
       debugPrint('📡 Sending GET request to $uri');
 
       final response = await http.get(uri);

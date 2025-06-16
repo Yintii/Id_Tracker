@@ -77,13 +77,17 @@ class _PendingIncidentsPageState extends State<PendingIncidentsPage> {
                             Text("Status: ${inc.status}"),
                           ],
                         ),
-                        onTap: () {
-                          Navigator.push(
+                        onTap: () async {
+                          final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => IncidentDetailPage(incident: inc),
                             ),
                           );
+
+                          if (result == true){
+                            _fetchIncidents();
+                          }
                         },
                       ),
                     );

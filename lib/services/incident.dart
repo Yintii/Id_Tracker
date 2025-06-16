@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:convert';
 
 class Incident {
   
@@ -58,7 +59,7 @@ class Incident {
     };
   }
 
-  static Future<bool> approveIncident(int id, String token) async {
+  static Future<bool> approveIncident(int id, int approvedBy, String token) async {
     final _baseUrl = dotenv.env['API_BASE_URL'];
     final response = await http.put(
       Uri.parse("$_baseUrl/incidents/$id/approve"),
@@ -66,15 +67,23 @@ class Incident {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
+      body: jsonEncode({
+        "id": id,
+        "approved_by": approvedBy,
+      }),
     );
     return response.statusCode == 200;
   }
 
-  static Future<bool> deleteIncident(int id, String token) async {
+  static Future<bool> deleteIncident(int id, int approvedBy, String token) async {
     final _baseUrl = dotenv.env['API_BASE_URL'];
     final response = await http.delete(
       Uri.parse('$_baseUrl/incidents/$id'),
       headers: {'Authorization': 'Bearer $token'},
+      body: jsonEncode({
+        "id": id,
+        "approved_by": approvedBy,
+      }),
     );
     return response.statusCode == 200;
   }
